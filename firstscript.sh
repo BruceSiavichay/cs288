@@ -110,13 +110,13 @@ fi
 #3 WAYS TO CREATE ARRAY
 #first way: 
 
-pet = ("a dog" "a cat" lizard) #if there's no space, no need for quotes
+pet=("a dog" "a cat" lizard) #if there's no space, no need for quotes
 
 #second way
-pet[10] = "a bird"
+pet[10]="a bird"
 
 #third way
-arr = (a{1..10})
+arr=(a{1..10})
 
 #Extraction: 
 ##use variable expansion along with index position

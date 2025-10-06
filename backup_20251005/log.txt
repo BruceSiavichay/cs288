@@ -1,0 +1,5 @@
+Original filenames: hw1_1.sh hw1_2.sh hw1_3.sh
+New filenames: 
+hw1_1.sh_20251005
+hw1_2.sh_20251005
+hw1_3.sh_20251005
