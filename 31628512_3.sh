@@ -1,80 +1,45 @@
 #!/bin/bash
 
-function traverse {
-	if [ ! -d "$1" ]; then
-		#echo Directory does not exist
-		return
-	fi
-
-	#checks if directory is empty; its empty we dont need to go further
-	if [ `ls "$1" | wc -l` -eq 0 ]; then
-		return
-	fi
-
-	entries=("$1"/*)
-
-	#basenames=()
-	#paths=()
-
-	for entry in "${entries[@]}"
-	do
-		if [ -f "$entry" ]; then #&& [ -s "$entry" ]; then
-			for i in `seq 0 "${#basenames[@]}"`
-			do
-				if [ "${basenames[$i]}" = "$(basename $entry)" ]; then
-					((duplicatefiles+=2))
-					echo "Found duplicate filename $base"
-					echo "Original file: ${paths[$i]}"
-					echo "Duplicate file: $entry"
-					prompting=0
-
-					while [ $prompting -ne 1 ]
-					do
-						echo "Do you want to remove $entry? (yes/no):"
-                                        	read userInput
-                                        	#the tr command can also be used to lowercase like this
-                                        	userInputLower=$(echo "$userInput" | tr '[:upper:]' '[:lower:]')
-                                        	if [[ "$userInputLower" == "yes" || "$userInputLower" == "y" ]]; then
-							prompting=1
-                                                	rm $entry
-							((duplicatefiles-=2))
-							((filesdeleted++))
-                                        	elif [[ "$userInputLower" == "no" || "$userInputLower" == "n" ]]; then
-							prompting=1
-                                                	continue
-                                        	fi
-					done
-				fi
-			done
-			((totalfiles++))
-		fi
-		basenames+=("$(basename $entry)")
-		paths+=("$entry")
-		traverse "$entry"
-	done
-}
-
 if [[ ${#@} -eq 0 || ${#@} -gt 1 ]]; then
 	echo Invalid number of arguments
 	exit
 fi
 
-if [ ! -d "$1" ]; then
-	echo Error: Provided path is not a directory
+if [ ! -f "$1" ]; then
+	echo Entered file does not exist
 	exit
 fi
 
-totalfiles=0
-duplicatefiles=0
-filesdeleted=0
+file=$1
+sortKeys=()
 
-basenames=()
-paths=()
+while IFS= read -r line;
+do
+	match=$(echo $line | cut -d ',' -f 3 | sed 's/^[ ]*//;s/[ ]*$//')
+	if [ ! -z "$match" ]; then
+		twoWordMatch=$(echo $match | grep -oE '[A-Za-z]*[ ][A-Za-z]*')
+		if [ ! -z "$twoWordMatch" ]; then
+			date=$(echo "$line" | cut -d ',' -f 2 | sed 's/^[ ]*//;s/[ ]*$//')
+			name=$(echo "$line" | cut -d ',' -f 1 )
+			year=$(echo "$date" | cut -d '-' -f 1)
+			month=$(echo "$date" | cut -d '-' -f 2)
+			day=$(echo "$date" | cut -d '-' -f 3)
 
-traverse $1
+			age=$((2025-year))
+			#because the month and day can start with a 0, we need to explicitly clarify that it's a base 10 by putting 10# in front. Also when you are doing this the brackets need to be circular for some reason.
+			if (( 10#$month > 10 )); then
+				((age--))
+			elif (( 10#$month == 10 && 10#$day >= 10#05 )); then
+				((age--))
+			fi
+			sortKeys+=("${age}|${name}") 
+		fi
+	fi
+done < "$file"
 
-
-echo "Total files processed: $totalfiles"
-echo "Duplicate files found: $duplicatefiles"
-echo "Files deleted: $filesdeleted"
-
+#this prints out the array, sorts them in reverse order, and then reads the age and name in a while loop like above and puts it in correct format.
+printf "%s\n" "${sortKeys[@]}" | sort -r |
+while IFS='|' read -r age name;
+do
+	printf "%s, Age: %s\n" "$name" "$age"
+done

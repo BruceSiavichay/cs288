@@ -1,43 +1,45 @@
 #!/bin/bash
 
-if [ ${#@} -eq 0 ]; then
-	echo Error: No file names provided
-	exit
-elif [ ${#@} -lt 3 ]; then
-	echo Error: Fewer than 3 file names provided
+if [[ ${#@} -eq 0 || ${#@} -gt 1 ]]; then
+	echo Invalid number of arguments
 	exit
 fi
 
-filenames=("$@")
+if [ ! -f "$1" ]; then
+	echo Entered file does not exist
+	exit
+fi
 
-directoryname="backup_$(date +%Y%m%d)"
+file=$1
+originalDates=()
+sortKeys=()
 
-#-p only makes the directory if it doesn't exist, so we won't get future errors
-mkdir -p "$directoryname"
+while IFS= read -r line;
+do
+	match=$(echo $line | grep -oE '[0-9]{2}[-/.][0-9]{2}[-/.][0-9]{4}')
 
-for filename in "${filenames[@]}"; do
-	if [ ! -f "$filename" ]; then
-		echo Warning: File $filename does not exist	
-	else
-		cp "$filename" "$directoryname/"
+	if [ ! -z "$match" ]; then
+		#checks whether the format has / - or .
+       		if [[ "$match" == *"-"* ]]; then
+               		year=$(echo "$match" | cut -d '-' -f 3)
+                	month=$(echo "$match" | cut -d '-' -f 1)
+                	day=$(echo "$match" | cut -d '-' -f 2)
+        	elif [[ "$match" == *"/"* ]]; then
+                	year=$(echo "$match" | cut -d '/' -f 3)
+                	month=$(echo "$match" | cut -d '/' -f 1)
+                	day=$(echo "$match" | cut -d '/' -f 2)
+        	elif [[ "$match" == *"."* ]]; then
+                	year=$(echo "$match" | sed 's/\./ /g' | cut -d ' ' -f 3)
+                	month=$(echo "$match" | sed 's/\./ /g' | cut -d ' ' -f 1)
+                	day=$(echo "$match" | sed 's/\./ /g' | cut -d ' ' -f 2)
+        	fi
 
-		#+%Y%m%d puts it in YYYYMMDD format
-		newname="$directoryname/${filename}_$(date +%Y%m%d)"
-		mv "$directoryname/$filename" "$newname"
+        	sortKey="${year}${month}${day}"
+
+        	#echo "${sortKey}|${match}"
+        	sortKeys+=("${sortKey}|${match}")
+
 	fi
-done
+done < "$file"
 
-cd "$directoryname"
-touch log.txt
-
-#> is used to overwrite, >> to append.
-echo "Original filenames: ${filenames[@]}" > log.txt
-echo "New filenames: " >> log.txt
-for file in "${filenames[@]}"; do
-	echo "${file}_$(date +%Y%m%d)" >> log.txt
-done
-
-cd ..
-
-echo Backup process is complete
-echo Location of the backup directory `pwd`
+printf "%s\n" "${sortKeys[@]}" | sort -d | cut -d '|' -f 2
