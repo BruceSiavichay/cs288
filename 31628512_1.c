@@ -1,74 +1,66 @@
 #include <stdio.h>
+#include <stdint.h>
+#include <ctype.h>
 
-int main() {
-	int n;
-	int matrix1[100][100], matrix2[100][100], result_matrix[100][100];
+int main(int argc, char * argv[]){
+	printf("argv | ");
+	//printf("%02hhx ", argv[0][i]);
 
-	FILE *stream1, *stream2;
-	stream1 = fopen("matrix1.bin", "r");
-	stream2 = fopen("matrix2.bin", "r");
-	if (stream1 == NULL || stream2 == NULL){
-		perror("fopen");
+	unsigned char *p = (unsigned char *)&argv;
+	for(int i = 7; i >= 0; i--){
+		printf("%02hhx ", *(p+i));
 	}
 
-	//reads the first character
-	size_t size_read = fread(&n, sizeof(int), 1, stream1);
+	printf(" | %p \n", &argv);
 
-	int n2;
-	size_t size_read2 = fread(&n2, sizeof(int), 1, stream2);
+	printf("\n");
 
-	if(n != n2){
-		printf("Matrices are not of the same size");
-		return 0;
-	}else if(n > 100){
-		printf("Matrix size is too high");
-		return 0;
+	//printf("%p \n", (void *)argv[0]);
+
+	for(int i = 0; i < argc; i++){
+		printf("argv[%d] | ", i);
+		unsigned char *p2 = (unsigned char *)&argv[i];
+		for(int j = 7; j >= 0; j--){
+			printf("%02hhx ", *(p2+j));
+		}
+
+		printf(" | %p \n", &argv[i]);
+		//printf("%p \n", (void *)argv[0]);
 	}
 
-	for(int i = 0; i < (n * n); i++){
-		int num1, num2;
-		size_read = fread(&num1, sizeof(int), 1, stream1);
-		size_read2 = fread(&num2, sizeof(int), 1, stream2);
+	printf("\n");
 
-		//populates both arrays
-		matrix1[i/n][i%n] = num1;
-		matrix2[i/n][i%n] = num2;
+	unsigned char *p3 = (unsigned char *)argv[0];
+
+	//uintptr_t converts the ptr thing to an integer
+	while(((uintptr_t) p3) % 8 != 0){
+		p3--;
 	}
 
-	fclose(stream1);
-	fclose(stream2);
+	unsigned char *end = NULL;
+	char *final_arg = argv[argc-1];
+	while(*final_arg){
+		final_arg++;
+	}
 
-	for(int i = 0; i < n; i++){
-		for(int j = 0; j < n; j++){
-			for(int k = 0; k < n; k++){
-				//got this from the instructions
-				result_matrix[i][j] += matrix1[i][k] * matrix2[k][j];
+	end = (unsigned char *)(final_arg+1);
+
+	while(p3 < end){
+		printf("|");
+		for(int i = 7; i >= 0; i--){
+			printf("%02hhx", *(p3 + i));
+			if(isprint(*(p3+i))){
+				printf("(%c) ", *(p3 + i));
+			}else{
+				printf("(\\0) ");
 			}
 		}
+		printf("| %p \n", p3);
+		p3 += 8;
 	}
 
-	FILE *stream3;
-	stream3 = fopen("matrix3.bin", "w");
-
-	size_t writefile = fwrite(&n, sizeof(int), 1, stream3);
-
-	for(int i = 0; i < n; i++){
-		for(int j = 0; j < n; j++){
-			writefile = fwrite(&result_matrix[i][j], sizeof(int), 1, stream3);
-		}
-	}
-
-	fclose(stream3);
-
-	FILE *stream4;
-	stream4 = fopen("matrix3.bin", "r");
-
-	for(int i = 0; i < (n * n) + 1; i++){
-		//printing to show it works
-		int num;
-		size_read = fread(&num, sizeof(int), 1, stream4);
-		printf("%d \n", num);
-	}
-
-	fclose(stream4);
+	return 0;
 }
+
+
+
