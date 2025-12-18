@@ -1,66 +1,67 @@
 #include <stdio.h>
-#include <stdint.h>
-#include <ctype.h>
+#include <stdlib.h>
+#include <pthread.h>
 
-int main(int argc, char * argv[]){
-	printf("argv | ");
-	//printf("%02hhx ", argv[0][i]);
+long nthreads, length;
+long double *partial_sums;
+//pthread_mutex_t mutex;
 
-	unsigned char *p = (unsigned char *)&argv;
-	for(int i = 7; i >= 0; i--){
-		printf("%02hhx ", *(p+i));
+void *pi_computation(void *id){
+	long *myid = (long *)id;
+	long chunk = length/nthreads;
+	long start = *myid * chunk;
+	long end = start + chunk;
+	long double partial_sum = 0.0;
+	long double x;
+
+	if(*myid == nthreads - 1){
+		end = length;
 	}
 
-	printf(" | %p \n", &argv);
-
-	printf("\n");
-
-	//printf("%p \n", (void *)argv[0]);
-
-	for(int i = 0; i < argc; i++){
-		printf("argv[%d] | ", i);
-		unsigned char *p2 = (unsigned char *)&argv[i];
-		for(int j = 7; j >= 0; j--){
-			printf("%02hhx ", *(p2+j));
-		}
-
-		printf(" | %p \n", &argv[i]);
-		//printf("%p \n", (void *)argv[0]);
+	//computation is done here in worker thread
+	for(int i = start; i <end; i++){
+		x = ((double) i - 0.5)/length;
+		partial_sum += 4.0 / (1.0 + x * x);
 	}
 
-	printf("\n");
+	//puts result in partial_sums to be added in main thread later
+	partial_sums[*myid] = partial_sum;
 
-	unsigned char *p3 = (unsigned char *)argv[0];
+	return NULL;
+}
 
-	//uintptr_t converts the ptr thing to an integer
-	while(((uintptr_t) p3) % 8 != 0){
-		p3--;
+int main(int argc, char *argv[]){
+	pthread_t *thread_array;
+	long *thread_ids;
+	long double sum = 0.0;
+	long double pi;
+
+	nthreads = strtol(argv[1], NULL, 10);
+	length = strtol(argv[2], NULL, 10);
+
+	thread_array = malloc(nthreads * sizeof(pthread_t));
+	thread_ids = (long *)malloc(nthreads * sizeof(long));
+	partial_sums = malloc(nthreads * sizeof(long double));
+
+	for(int i = 0; i < nthreads; i++){
+		thread_ids[i] = i;
+		pthread_create(&thread_array[i], NULL, pi_computation, &thread_ids[i]);
 	}
 
-	unsigned char *end = NULL;
-	char *final_arg = argv[argc-1];
-	while(*final_arg){
-		final_arg++;
+	for(int i = 0; i < nthreads; i++){
+		pthread_join(thread_array[i], NULL);
 	}
 
-	end = (unsigned char *)(final_arg+1);
-
-	while(p3 < end){
-		printf("|");
-		for(int i = 7; i >= 0; i--){
-			printf("%02hhx", *(p3 + i));
-			if(isprint(*(p3+i))){
-				printf("(%c) ", *(p3 + i));
-			}else{
-				printf("(\\0) ");
-			}
-		}
-		printf("| %p \n", p3);
-		p3 += 8;
+	for(int i = 0; i < nthreads; i++){
+		sum += partial_sums[i];
 	}
+	
+	pi = sum/length;
+	printf("The approximation of pi is %.22Lf", pi);
+
+	free(thread_array);
+	free(thread_ids);
+	free(partial_sums);
 
 	return 0;
 }
-
-
-

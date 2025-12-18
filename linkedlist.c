@@ -11,6 +11,8 @@ int main(){
 	struct node *head=NULL, *tail=NULL, *pnode;
 	//pnode will be used to create new nodes in the list
 	while(1){
+		//allocation allows node to still exist while pnode points elsewhere
+		//in another words you dont free pnode because thats just a pointer.
 		pnode = (struct node *)malloc(sizeof(struct node));
 
 		printf("data: "); scanf("%d", &(pnode->data));
